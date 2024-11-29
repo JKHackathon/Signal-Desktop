@@ -3,7 +3,7 @@
 /* eslint-disable max-classes-per-file */
 
 import { ipcRenderer, type DesktopCapturerSource } from 'electron';
-import * as macScreenShare from '@indutny/mac-screen-share';
+//import * as macScreenShare from '@indutny/mac-screen-share';
 
 import * as log from '../logging/log';
 import * as Errors from '../types/errors';
@@ -58,7 +58,7 @@ type State = Readonly<
     }
   | {
       step: Step.NativeMacOS;
-      stream: macScreenShare.Stream;
+      // stream: macScreenShare.Stream;
     }
   | {
       step: Step.Done;
@@ -101,20 +101,20 @@ export class DesktopCapturer {
       DesktopCapturer.initialize();
     }
 
-    if (macScreenShare.isSupported) {
-      this.state = {
-        step: Step.NativeMacOS,
-        stream: this.getNativeMacOSStream(),
-      };
-    } else {
-      this.state = { step: Step.RequestingMedia, promise: this.getStream() };
-    }
+    // if (macScreenShare.isSupported) {
+    //   this.state = {
+    //     step: Step.NativeMacOS,
+    //     stream: this.getNativeMacOSStream(),
+    //   };
+    // } else {
+    this.state = { step: Step.RequestingMedia, promise: this.getStream() };
+    // }
   }
 
   public abort(): void {
-    if (this.state.step === Step.NativeMacOS) {
-      this.state.stream.stop();
-    }
+    // if (this.state.step === Step.NativeMacOS) {
+    //   this.state.stream.stop();
+    // }
 
     if (this.state.step === Step.SelectingSource) {
       this.state.onSource(undefined);
@@ -231,85 +231,85 @@ export class DesktopCapturer {
     }
   }
 
-  private getNativeMacOSStream(): macScreenShare.Stream {
-    const track = new MediaStreamTrackGenerator({ kind: 'video' });
-    const writer = track.writable.getWriter();
+  // private getNativeMacOSStream(): macScreenShare.Stream {
+  //   const track = new MediaStreamTrackGenerator({ kind: 'video' });
+  //   const writer = track.writable.getWriter();
 
-    const mediaStream = new MediaStream();
-    mediaStream.addTrack(track);
+  //   const mediaStream = new MediaStream();
+  //   mediaStream.addTrack(track);
 
-    let isRunning = false;
+  //   let isRunning = false;
 
-    let lastFrame: VideoFrame | undefined;
-    let lastFrameSentAt = 0;
+  //   let lastFrame: VideoFrame | undefined;
+  //   let lastFrameSentAt = 0;
 
-    let frameRepeater: NodeJS.Timeout | undefined;
+  //   let frameRepeater: NodeJS.Timeout | undefined;
 
-    const cleanup = () => {
-      lastFrame?.close();
-      if (frameRepeater != null) {
-        clearInterval(frameRepeater);
-      }
-      frameRepeater = undefined;
-      lastFrame = undefined;
-    };
+  //   const cleanup = () => {
+  //     lastFrame?.close();
+  //     if (frameRepeater != null) {
+  //       clearInterval(frameRepeater);
+  //     }
+  //     frameRepeater = undefined;
+  //     lastFrame = undefined;
+  //   };
 
-    const stream = new macScreenShare.Stream({
-      width: REQUESTED_SCREEN_SHARE_WIDTH,
-      height: REQUESTED_SCREEN_SHARE_HEIGHT,
-      frameRate: REQUESTED_SCREEN_SHARE_FRAMERATE,
+  //   const stream = new macScreenShare.Stream({
+  //     width: REQUESTED_SCREEN_SHARE_WIDTH,
+  //     height: REQUESTED_SCREEN_SHARE_HEIGHT,
+  //     frameRate: REQUESTED_SCREEN_SHARE_FRAMERATE,
 
-      onStart: () => {
-        isRunning = true;
+  //     onStart: () => {
+  //       isRunning = true;
 
-        // Repeat last frame every second to match "min" constraint above.
-        frameRepeater = setInterval(() => {
-          if (isRunning && track.readyState !== 'ended' && lastFrame != null) {
-            if (isOlderThan(lastFrameSentAt, SECOND)) {
-              drop(writer.write(lastFrame.clone()));
-            }
-          } else {
-            cleanup();
-          }
-        }, SECOND);
+  //       // Repeat last frame every second to match "min" constraint above.
+  //       frameRepeater = setInterval(() => {
+  //         if (isRunning && track.readyState !== 'ended' && lastFrame != null) {
+  //           if (isOlderThan(lastFrameSentAt, SECOND)) {
+  //             drop(writer.write(lastFrame.clone()));
+  //           }
+  //         } else {
+  //           cleanup();
+  //         }
+  //       }, SECOND);
 
-        this.options.onMediaStream(mediaStream);
-      },
-      onStop() {
-        if (!isRunning) {
-          return;
-        }
-        isRunning = false;
+  //       this.options.onMediaStream(mediaStream);
+  //     },
+  //     onStop() {
+  //       if (!isRunning) {
+  //         return;
+  //       }
+  //       isRunning = false;
 
-        if (track.readyState === 'ended') {
-          stream.stop();
-          return;
-        }
-        drop(writer.close());
-      },
-      onFrame(frame, width, height) {
-        if (!isRunning) {
-          return;
-        }
-        if (track.readyState === 'ended') {
-          stream.stop();
-          return;
-        }
+  //       if (track.readyState === 'ended') {
+  //         stream.stop();
+  //         return;
+  //       }
+  //       drop(writer.close());
+  //     },
+  //     onFrame(frame, width, height) {
+  //       if (!isRunning) {
+  //         return;
+  //       }
+  //       if (track.readyState === 'ended') {
+  //         stream.stop();
+  //         return;
+  //       }
 
-        lastFrame?.close();
-        lastFrameSentAt = Date.now();
-        lastFrame = new VideoFrame(frame, {
-          format: 'NV12',
-          codedWidth: width,
-          codedHeight: height,
-          timestamp: 0,
-        });
-        drop(writer.write(lastFrame.clone()));
-      },
-    });
+  //       lastFrame?.close();
+  //       lastFrameSentAt = Date.now();
+  //       lastFrame = new VideoFrame(frame, {
+  //         format: 'NV12',
+  //         codedWidth: width,
+  //         codedHeight: height,
+  //         timestamp: 0,
+  //       });
+  //       drop(writer.write(lastFrame.clone()));
+  //     },
+  //   });
 
-    return stream;
-  }
+  //   return stream;
+  // }
 
   private translateSourceName(source: DesktopCapturerSource): string {
     const { i18n } = this.options;

@@ -6,7 +6,7 @@ import {
   hasScreenCapturePermission,
   openSystemPreferences,
 } from 'mac-screen-capture-permissions';
-import { isSupported as isNativeMacScreenShareSupported } from '@indutny/mac-screen-share';
+//import { isSupported as isNativeMacScreenShareSupported } from '@indutny/mac-screen-share';
 import { omit } from 'lodash';
 import type { ReadonlyDeep } from 'type-fest';
 import {
@@ -1319,7 +1319,7 @@ function getPresentingSources(): ThunkAction<
     const platform = getPlatform(getState());
     const needsPermission =
       platform === 'darwin' &&
-      !isNativeMacScreenShareSupported &&
+      //!isNativeMacScreenShareSupported &&
       !hasScreenCapturePermission();
 
     const capturer = new DesktopCapturer({

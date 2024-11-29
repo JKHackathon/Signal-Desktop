@@ -137,6 +137,7 @@ export function ConversationView({
           </div>
           <div className="ConversationView__composition-area">
             {renderCompositionArea(conversationId)}
+            {renderCompositionArea(conversationId)}
           </div>
         </div>
       </div>
