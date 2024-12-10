@@ -72,6 +72,13 @@ import {
 import { missingCaseError } from '../util/missingCaseError';
 import { AutoSubstituteAsciiEmojis } from '../quill/auto-substitute-ascii-emojis';
 import { dropNull } from '../util/dropNull';
+import { compressAndEncodeMessage } from '../messages/encodeMessage';
+import * as readline from 'readline';
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
 
 Quill.register('formats/emoji', EmojiBlot);
 Quill.register('formats/mention', MentionBlot);
@@ -207,6 +214,12 @@ export function CompositionInput(props: Props): React.ReactElement {
   );
 
   const [isMouseDown, setIsMouseDown] = React.useState<boolean>(false);
+
+  const [isSendingSecretMessage, setIsSendingSecretMessage] =
+    React.useState<boolean>(false);
+  const [hasSentStartSignal, setHasSentStartSignal] =
+    React.useState<boolean>(false);
+  const [encodedMessages, setEncodedMessages] = React.useState<number[]>([]);
 
   const generateDelta = (
     text: string,
@@ -357,17 +370,135 @@ export function CompositionInput(props: Props): React.ReactElement {
       return;
     }
 
+    log.debug(
+      'isSendingSecretMessage: ',
+      isSendingSecretMessage,
+      ', hasSentStartSignal: ',
+      hasSentStartSignal
+    );
+
     const { text, bodyRanges } = getTextAndRanges();
 
-    log.info(
-      `CompositionInput: Submitting message ${timestamp} with ${bodyRanges.length} ranges`
-    );
-    canSendRef.current = false;
-    const didSend = onSubmit(text, bodyRanges, timestamp);
+    // If secret message in the middle of being sent
+    if (!isSendingSecretMessage) {
+      canSendRef.current = false;
+      setEncodedMessages(compressAndEncodeMessage(text));
+      setIsSendingSecretMessage(true);
+      log.info('Secret Message: Starting to send secret message "', text, '"');
+      log.info(
+        'Secret Message: Please send ',
+        encodedMessages.length + 2,
+        ' more messages'
+      );
+      canSendRef.current = true;
+      return;
+    }
 
+    if (!hasSentStartSignal) {
+      // Send starting secret message timestamp
+      canSendRef.current = false;
+      setHasSentStartSignal(true);
+
+      log.info(
+        'Secret Message: Please send ',
+        encodedMessages.length + 1,
+        ' more messages'
+      );
+
+      log.info('Secret Message: currently sending start signal "', text, '"');
+
+      const didSend = onSubmit(
+        text,
+        bodyRanges,
+        Math.floor(Date.now() / 100000) * 100000 + 99999
+      );
+
+      if (!didSend) {
+        canSendRef.current = true;
+      }
+      return;
+    }
+
+    if (encodedMessages.length > 0) {
+      log.info(
+        `CompositionInput: Submitting message ${timestamp} with ${bodyRanges.length} ranges`
+      );
+
+      log.info(
+        'Secret Message: Please send ',
+        encodedMessages.length,
+        ' more messages'
+      );
+      log.info('Secret Message: currently sending "', text, '"');
+
+      canSendRef.current = false;
+      let currTime = Date.now();
+      // while (Math.abs((currTime % 100000) - encodedMessage) > 100) {
+      //   log.info(
+      //     `CompositionInput: Current time ${currTime} target time ${encodedMessage}`
+      //   );
+      //   await new Promise(resolve => setTimeout(resolve, 10));
+      //   currTime = Date.now();
+      // }
+
+      const didSend = onSubmit(
+        text,
+        bodyRanges,
+        Math.floor(currTime / 100000) * 100000 + encodedMessages[0]
+      );
+
+      if (!didSend) {
+        canSendRef.current = true;
+      }
+
+      setEncodedMessages(encodedMessages.slice(1));
+
+      // encodedMessages.shift();
+      return;
+    }
+
+    // (async () => {
+    //   for (let encodedMessage of encodedMessages) {
+    //     log.info(
+    //       `CompositionInput: Submitting message ${timestamp} with ${bodyRanges.length} ranges`
+    //     );
+    //     canSendRef.current = false;
+    //     let currTime = Date.now();
+    //     // while (Math.abs((currTime % 100000) - encodedMessage) > 100) {
+    //     //   log.info(
+    //     //     `CompositionInput: Current time ${currTime} target time ${encodedMessage}`
+    //     //   );
+    //     //   await new Promise(resolve => setTimeout(resolve, 10));
+    //     //   currTime = Date.now();
+    //     // }
+
+    //     const didSend = onSubmit(
+    //       encodedMessage.toString(),
+    //       bodyRanges,
+    //       Math.floor(currTime / 100000) * 100000 + encodedMessage
+    //     );
+
+    //     if (!didSend) {
+    //       canSendRef.current = true;
+    //     }
+    //   }
+    // })();
+
+    // Send ending secret message timestamp
+    canSendRef.current = false;
+    const didSend = onSubmit(
+      text,
+      bodyRanges,
+      Math.floor(Date.now() / 100000) * 100000 + 99998
+    );
     if (!didSend) {
       canSendRef.current = true;
     }
+
+    log.info('Secret Message: Done being sent');
+    log.info('Secret Message: currently sending "', text, '"');
+    setIsSendingSecretMessage(false);
+    setHasSentStartSignal(false);
   };
 
   if (inputApi) {

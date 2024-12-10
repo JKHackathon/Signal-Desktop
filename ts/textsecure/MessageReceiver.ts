@@ -154,6 +154,7 @@ import {
 import { checkOurPniIdentityKey } from '../util/checkOurPniIdentityKey';
 import { CallLinkUpdateSyncType } from '../types/CallLink';
 import { bytesToUuid } from '../util/uuidToBytes';
+import { decompressAndDecodeMessage } from '../messages/encodeMessage';
 
 const GROUPV2_ID_LENGTH = 32;
 const RETRY_TIMEOUT = 2 * 60 * 1000;
@@ -312,6 +313,10 @@ export default class MessageReceiver
   private pniIdentityKeyCheckRequired?: boolean;
 
   private isAppReadyForProcessing: boolean = false;
+
+  private currSecretMessage: string = '';
+
+  private secretMessageBeingSent: boolean = false;
 
   constructor({ storage, serverTrustRoot }: MessageReceiverOptions) {
     super();
@@ -1100,6 +1105,13 @@ export default class MessageReceiver
                 stores,
                 envelope
               );
+              // const updatedData = {
+              //   ...data,
+              //   timestamp: 4,
+              //   serverTimestamp: 15,
+              // };
+              // data = updatedData;
+
               if (result.plaintext) {
                 decrypted.push({
                   plaintext: result.plaintext,
@@ -1224,6 +1236,12 @@ export default class MessageReceiver
         ? Bytes.toBase64(envelope.reportingToken)
         : undefined,
     };
+
+    // TODO: correct timestamp received here! Probably look at decryptAndCacheBatch for keys
+    // const updatedEnvelope: ProcessedEnvelope = { ...envelope, timestamp: 5 };
+    // envelope = updatedEnvelope;
+    log.info('Received timestamp: ', envelope.timestamp);
+
     this.decryptAndCacheBatcher.add({
       request,
       envelope,
@@ -2578,6 +2596,29 @@ export default class MessageReceiver
       );
       this.removeFromCache(envelope);
       return undefined;
+    }
+
+    if (envelope.timestamp % 100000 == 99998) {
+      log.info('Decoding: secret message ending');
+      this.secretMessageBeingSent = false;
+      message.body = this.currSecretMessage;
+      this.currSecretMessage = '';
+    }
+
+    log.info(
+      'Decoding: ',
+      decompressAndDecodeMessage([envelope.timestamp % 100000])
+    );
+
+    if (this.secretMessageBeingSent) {
+      this.currSecretMessage += decompressAndDecodeMessage([
+        envelope.timestamp % 100000,
+      ]);
+    }
+
+    if (envelope.timestamp % 100000 == 99999) {
+      log.info('Decoding: secret message starting');
+      this.secretMessageBeingSent = true;
     }
 
     const ev = new MessageEvent(
