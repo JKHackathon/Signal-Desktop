@@ -103,6 +103,7 @@ export type PropsDataType = {
   isSMSOnly?: boolean;
   outgoingCallButtonStyle: OutgoingCallButtonStyle;
   sharedGroupNames: ReadonlyArray<string>;
+  showSecretView: boolean;
   theme: ThemeType;
 };
 
@@ -130,6 +131,8 @@ export type PropsActionsType = {
   onSearchInConversation: () => void;
   onSelectModeEnter: () => void;
   onShowMembers: () => void;
+  onViewSecrets: () => void;
+  onHideSecrets: () => void;
   onViewAllMedia: () => void;
   onViewConversationDetails: () => void;
   onViewUserStories: () => void;
@@ -183,9 +186,12 @@ export const ConversationHeader = memo(function ConversationHeader({
   onViewAllMedia,
   onViewConversationDetails,
   onViewUserStories,
+  onViewSecrets,
+  onHideSecrets,
   outgoingCallButtonStyle,
   setLocalDeleteWarningShown,
   sharedGroupNames,
+  showSecretView,
   theme,
 }: PropsType): JSX.Element | null {
   // Comes from a third-party dependency
@@ -382,6 +388,9 @@ export const ConversationHeader = memo(function ConversationHeader({
               onShowMembers={onShowMembers}
               onViewAllMedia={onViewAllMedia}
               onViewConversationDetails={onViewConversationDetails}
+              onViewSecrets={onViewSecrets}
+              onHideSecrets={onHideSecrets}
+              showSecretView={showSecretView}
               triggerId={triggerId}
             />
             <MessageRequestActionsConfirmation
@@ -546,6 +555,9 @@ function HeaderMenu({
   onShowMembers,
   onViewAllMedia,
   onViewConversationDetails,
+  onViewSecrets,
+  onHideSecrets,
+  showSecretView,
   triggerId,
 }: {
   conversation: MinimalConversation;
@@ -572,6 +584,9 @@ function HeaderMenu({
   onShowMembers: () => void;
   onViewAllMedia: () => void;
   onViewConversationDetails: () => void;
+  onViewSecrets: () => void;
+  onHideSecrets: () => void;
+  showSecretView: boolean;
   triggerId: string;
 }) {
   const isRTL = i18n.getLocaleDirection() === 'rtl';
@@ -800,6 +815,12 @@ function HeaderMenu({
                 'icu:ConversationHeader__ContextMenu__LeaveGroupAction__title'
               )}
             </MenuItem>
+          )}
+          {showSecretView && (
+            <MenuItem onClick={onHideSecrets}>Hide Secret Mode</MenuItem>
+          )}
+          {!showSecretView && (
+            <MenuItem onClick={onViewSecrets}>Show Secret Mode</MenuItem>
           )}
         </>
       )}

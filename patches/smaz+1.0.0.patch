@@ -1,0 +1,15 @@
+diff --git a/node_modules/smaz/package.json b/node_modules/smaz/package.json
+--- a/node_modules/smaz/package.json
++++ b/node_modules/smaz/package.json
+@@ -35,10 +35,5 @@
+     "mocha": "1.0.x",
+     "should": "0.6.x"
+   },
+-  "licenses": [
+-    {
+-      "type": "BSD",
+-      "url": "https://github.com/personalcomputer/smaz.js/blob/master/COPYING"
+-    }
+-  ]
++  "license": "BSD (https://github.com/personalcomputer/smaz.js/blob/master/COPYING)"
+ }

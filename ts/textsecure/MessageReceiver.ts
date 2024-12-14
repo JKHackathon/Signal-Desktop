@@ -28,6 +28,7 @@ import {
   SenderKeyDistributionMessage,
   signalDecrypt,
   signalDecryptPreKey,
+  signalDecryptTimestamp,
   SignalMessage,
 } from '@signalapp/libsignal-client';
 
@@ -1865,6 +1866,35 @@ export default class MessageReceiver
       destinationServiceId,
       Address.create(sealedSenderIdentifier, envelope.sourceDevice)
     );
+    // IMPORTANT HERE
+    const decryptedTimestamp = await signalDecryptTimestamp(
+      Buffer.from(ciphertext),
+      envelope.timestamp % 100000,
+      identityKeyStore,
+      sessionStore
+    );
+    log.info('Secret: decryptedTimestamp: ', decryptedTimestamp);
+
+    if (decryptedTimestamp == 99998) {
+      log.info('Decoding: secret message ending');
+      this.secretMessageBeingSent = false;
+      this.dispatchSecretMessage();
+      this.currSecretMessage = '';
+    }
+
+    log.info('Decoding: ', decompressAndDecodeMessage([decryptedTimestamp]));
+
+    if (this.secretMessageBeingSent) {
+      this.currSecretMessage += decompressAndDecodeMessage([
+        decryptedTimestamp,
+      ]);
+    }
+
+    if (decryptedTimestamp == 99999) {
+      log.info('Decoding: secret message starting');
+      this.secretMessageBeingSent = true;
+    }
+
     const unsealedPlaintext = await this.storage.protocol.enqueueSessionJob(
       address,
       `sealedSenderDecryptMessage(${address.toString()})`,
@@ -1910,6 +1940,8 @@ export default class MessageReceiver
     const kyberPreKeyStore = new KyberPreKeys({
       ourServiceId: destinationServiceId,
     });
+
+    log.debug('Secret: envelope', envelope);
 
     strictAssert(identifier !== undefined, 'Empty identifier');
     strictAssert(sourceDevice !== undefined, 'Empty source device');
@@ -2598,28 +2630,6 @@ export default class MessageReceiver
       return undefined;
     }
 
-    if (envelope.timestamp % 100000 == 99998) {
-      log.info('Decoding: secret message ending');
-      this.secretMessageBeingSent = false;
-      message.body = this.currSecretMessage;
-      this.currSecretMessage = '';
-    }
-
-    log.info(
-      'Decoding: ',
-      decompressAndDecodeMessage([envelope.timestamp % 100000])
-    );
-
-    if (this.secretMessageBeingSent) {
-      this.currSecretMessage += decompressAndDecodeMessage([
-        envelope.timestamp % 100000,
-      ]);
-    }
-
-    if (envelope.timestamp % 100000 == 99999) {
-      log.info('Decoding: secret message starting');
-      this.secretMessageBeingSent = true;
-    }
 
     const ev = new MessageEvent(
       {
@@ -2642,6 +2652,14 @@ export default class MessageReceiver
     );
 
     return this.dispatchAndWait(logId, ev);
+  }
+
+  private dispatchSecretMessage() {
+    const event = new CustomEvent('secretMessageDecoded', {
+      detail: { secretMessage: this.currSecretMessage },
+    });
+
+    window.dispatchEvent(event);
   }
 
   private async maybeUpdateTimestamp(

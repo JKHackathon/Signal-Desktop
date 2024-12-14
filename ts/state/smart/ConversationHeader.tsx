@@ -46,6 +46,8 @@ import { getDeleteSyncSendEnabled } from '../selectors/items-extra';
 
 export type OwnProps = {
   id: string;
+  showSecretView: boolean;
+  setShowSecretView: (arg0: boolean) => void;
 };
 
 const useOutgoingCallButtonStyle = (
@@ -84,6 +86,8 @@ const useOutgoingCallButtonStyle = (
 
 export const SmartConversationHeader = memo(function SmartConversationHeader({
   id,
+  showSecretView,
+  setShowSecretView,
 }: OwnProps) {
   const conversationSelector = useSelector(getConversationSelector);
   const conversation = conversationSelector(id);
@@ -300,9 +304,12 @@ export const SmartConversationHeader = memo(function SmartConversationHeader({
       onViewConversationDetails={onViewConversationDetails}
       onViewAllMedia={onViewAllMedia}
       onViewUserStories={onViewUserStories}
+      onViewSecrets={() => setShowSecretView(true)}
+      onHideSecrets={() => setShowSecretView(false)}
       outgoingCallButtonStyle={outgoingCallButtonStyle}
       setLocalDeleteWarningShown={setLocalDeleteWarningShown}
       sharedGroupNames={conversation.sharedGroupNames}
+      showSecretView={showSecretView}
       theme={theme}
     />
   );

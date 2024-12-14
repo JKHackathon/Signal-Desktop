@@ -18,12 +18,36 @@ import { useComposerActions } from '../ducks/composer';
 import { useConversationsActions } from '../ducks/conversations';
 import { isShowingAnyModal } from '../selectors/globalModals';
 
-function renderCompositionArea(conversationId: string) {
-  return <SmartCompositionArea id={conversationId} />;
+function renderCompositionArea(
+  conversationId: string,
+  encodedMessage: number[],
+  setEncodedMessage: (arg0: number[]) => void,
+  isSendingSecretMessage: boolean,
+  setIsSendingSecretMessage: (arg0: boolean) => void
+) {
+  return (
+    <SmartCompositionArea
+      id={conversationId}
+      encodedMessage={encodedMessage}
+      setEncodedMessage={setEncodedMessage}
+      isSendingSecretMessage={isSendingSecretMessage}
+      setIsSendingSecretMessage={setIsSendingSecretMessage}
+    />
+  );
 }
 
-function renderConversationHeader(conversationId: string) {
-  return <SmartConversationHeader id={conversationId} />;
+function renderConversationHeader(
+  conversationId: string,
+  showSecretView: boolean,
+  setShowSecretView: (arg0: boolean) => void
+) {
+  return (
+    <SmartConversationHeader
+      id={conversationId}
+      showSecretView={showSecretView}
+      setShowSecretView={setShowSecretView}
+    />
+  );
 }
 
 function renderTimeline(conversationId: string) {

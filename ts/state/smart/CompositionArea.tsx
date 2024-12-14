@@ -80,8 +80,16 @@ function renderSmartCompositionRecordingDraft(
 
 export const SmartCompositionArea = memo(function SmartCompositionArea({
   id,
+  encodedMessage,
+  setEncodedMessage,
+  isSendingSecretMessage,
+  setIsSendingSecretMessage,
 }: {
   id: string;
+  encodedMessage: number[];
+  setEncodedMessage: (arg0: number[]) => void;
+  isSendingSecretMessage: boolean;
+  setIsSendingSecretMessage: (arg0: boolean) => void;
 }) {
   const conversationSelector = useSelector(getConversationSelector);
   const conversation = conversationSelector(id);
@@ -363,6 +371,10 @@ export const SmartCompositionArea = memo(function SmartCompositionArea({
       setComposerFocus={setComposerFocus}
       setMessageToEdit={setMessageToEdit}
       showConversation={showConversation}
+      encodedMessage={encodedMessage}
+      setEncodedMessage={setEncodedMessage}
+      isSendingSecretMessage={isSendingSecretMessage}
+      setIsSendingSecretMessage={setIsSendingSecretMessage}
     />
   );
 });

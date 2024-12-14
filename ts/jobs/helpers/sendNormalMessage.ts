@@ -55,6 +55,7 @@ import {
   getChangesForPropAtTimestamp,
 } from '../../util/editHelpers';
 import { getMessageSentTimestamp } from '../../util/getMessageSentTimestamp';
+import { encryptTimestamp } from '../../services/SecretMessageService';
 
 const MAX_CONCURRENT_ATTACHMENT_UPLOADS = 5;
 
@@ -79,6 +80,34 @@ export async function sendNormalMessage(
     );
     return;
   }
+
+  // WORKS HERE!!!
+  // message.attributes.timestamp = 123456;
+  // message.attributes.sent_at = 123456;
+  // message.attributes.received_at_ms = 123456;
+
+  log.info(
+    'TEST SECRET: plaintext timestamp',
+    message.attributes.timestamp % 100000
+  );
+
+  const encryptedTimestamp = await encryptTimestamp(
+    message.attributes.timestamp % 100000,
+    conversation.getRecipients()[0]
+  );
+  log.info('TEST SECRET: encrypted timestamp', encryptedTimestamp);
+  const finalTimestamp =
+    Math.floor(Date.now() / 100000) * 100000 + encryptedTimestamp;
+
+  message.attributes.timestamp = finalTimestamp;
+  message.attributes.sent_at = finalTimestamp;
+  message.attributes.received_at_ms = finalTimestamp;
+
+  log.info(
+    'test message attributed sendNormalMessage: ',
+    message.attributes.timestamp
+  );
+  log.info('test message: ', message);
 
   const messageConversation = message.getConversation();
   if (messageConversation !== conversation) {

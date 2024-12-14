@@ -189,6 +189,10 @@ export type OwnProps = Readonly<{
     payload: ForwardMessagesPayload,
     onForward: () => void
   ) => void;
+  encodedMessage: number[];
+  setEncodedMessage: (arg0: number[]) => void;
+  isSendingSecretMessage: boolean;
+  setIsSendingSecretMessage: (arg0: boolean) => void;
 }>;
 
 export type Props = Pick<
@@ -337,6 +341,10 @@ export const CompositionArea = memo(function CompositionArea({
   selectedMessageIds,
   toggleSelectMode,
   toggleForwardMessagesModal,
+  encodedMessage,
+  setEncodedMessage,
+  isSendingSecretMessage,
+  setIsSendingSecretMessage,
 }: Props): JSX.Element | null {
   const [dirty, setDirty] = useState(false);
   const [large, setLarge] = useState(false);
@@ -383,6 +391,7 @@ export const CompositionArea = memo(function CompositionArea({
       emojiButtonRef.current?.close();
 
       if (editedMessageId) {
+        console.log('Test: sending edited message');
         sendEditedMessage(conversationId, {
           bodyRanges,
           message,
@@ -392,6 +401,7 @@ export const CompositionArea = memo(function CompositionArea({
           targetMessageId: editedMessageId,
         });
       } else {
+        console.log('Test: sending multimedia message');
         sendMultiMediaMessage(conversationId, {
           draftAttachments,
           bodyRanges,
@@ -1049,6 +1059,10 @@ export const CompositionArea = memo(function CompositionArea({
             skinTone={skinTone ?? null}
             sortedGroupMembers={sortedGroupMembers}
             theme={theme}
+            encodedMessage={encodedMessage}
+            setEncodedMessage={setEncodedMessage}
+            isSendingSecretMessage={isSendingSecretMessage}
+            setIsSendingSecretMessage={setIsSendingSecretMessage}
           />
         </div>
         {!large ? (
