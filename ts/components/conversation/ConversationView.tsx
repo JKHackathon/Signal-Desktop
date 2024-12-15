@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import classNames from 'classnames';
 import { useEscapeHandling } from '../../hooks/useEscapeHandling';
 import { compressAndEncodeMessage } from '../../messages/encodeMessage';
+import { secretMessageStatus, SENDING_SECRET_SIGNAL, STOPPING_SECRET_SIGNAL } from '../../services/SecretMessageService';
 
 export type PropsType = {
   conversationId: string;
@@ -127,13 +128,14 @@ export function ConversationView({
   );
 
   type SecretMessage = [string, boolean];
+  // Store secret messages
   const [messages, setMessages] = useState<SecretMessage[]>([]);
   const [isSendingSecretMessage, setIsSendingSecretMessage] =
     React.useState<boolean>(false);
 
   const [encodedMessage, setEncodedMessage] = React.useState<number[]>([]);
 
-  function BasicTextInput() {
+  function SecretMessageInput() {
     const [text, setText] = useState('');
 
     const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -148,14 +150,21 @@ export function ConversationView({
           );
           return;
         }
+
+        if (secretMessageStatus.isSendingSecret) {
+          alert(
+            'Secret message currently being sent. Please wait until it completes'
+          );
+          return;
+        }
+
         console.log('User pressed Enter with text: ', text);
-        // Perform action here
-        // alert(`Action triggered with: ${text}`);
+
         const newMessage: SecretMessage = [text, true];
         setMessages(prevMessages => [...prevMessages, newMessage]);
         setText('');
         setIsSendingSecretMessage(true);
-        setEncodedMessage([99999, ...compressAndEncodeMessage(text), 99998]);
+        setEncodedMessage([SENDING_SECRET_SIGNAL, ...compressAndEncodeMessage(text), STOPPING_SECRET_SIGNAL]);
         console.log(
           'Secret message: need to send ',
           encodedMessage.length,
@@ -193,6 +202,7 @@ export function ConversationView({
     );
   }
 
+  // Format for outgoing messages
   function OutgoingMessage(text: string): JSX.Element {
     return (
       <div className={`module-message module-message--outgoing`}>
@@ -212,6 +222,7 @@ export function ConversationView({
     );
   }
 
+  // Format for incoming messages
   function IncomingMessage(text: string): JSX.Element {
     return (
       <div className={`module-message module-message--incoming`}>
@@ -234,22 +245,23 @@ export function ConversationView({
   const [showSecretView, setShowSecretView] = useState(false);
 
   useEffect(() => {
+    // When secret message fully received, display
     const handleSecretMessageDecoded = (
       event: CustomEvent<{ secretMessage: string }>
     ) => {
       const { secretMessage } = event.detail;
       const newMessage: SecretMessage = [secretMessage, false];
-      console.log('Secret messages: ', newMessage)
+      console.log('Secret messages: ', newMessage);
       setMessages(prevMessages => [...prevMessages, newMessage]);
     };
 
-    // Register listener
+    // Register
     window.addEventListener(
       'secretMessageDecoded',
       handleSecretMessageDecoded as EventListener
     );
 
-    // Cleanup listener
+    // Cleanup
     return () => {
       window.removeEventListener(
         'secretMessageDecoded',
@@ -310,7 +322,7 @@ export function ConversationView({
               {isSendingSecretMessage && (
                 <h3>Please send {encodedMessage.length} cover messages</h3>
               )}
-              <BasicTextInput />
+              <SecretMessageInput />
             </div>
           )}
         </div>

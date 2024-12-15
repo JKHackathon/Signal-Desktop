@@ -156,6 +156,7 @@ import { checkOurPniIdentityKey } from '../util/checkOurPniIdentityKey';
 import { CallLinkUpdateSyncType } from '../types/CallLink';
 import { bytesToUuid } from '../util/uuidToBytes';
 import { decompressAndDecodeMessage } from '../messages/encodeMessage';
+import { NUM_SECRET_DIGITS_MOD, SENDING_SECRET_SIGNAL, STOPPING_SECRET_SIGNAL } from '../services/SecretMessageService';
 
 const GROUPV2_ID_LENGTH = 32;
 const RETRY_TIMEOUT = 2 * 60 * 1000;
@@ -1866,16 +1867,16 @@ export default class MessageReceiver
       destinationServiceId,
       Address.create(sealedSenderIdentifier, envelope.sourceDevice)
     );
-    // IMPORTANT HERE
+
     const decryptedTimestamp = await signalDecryptTimestamp(
       Buffer.from(ciphertext),
-      envelope.timestamp % 100000,
+      envelope.timestamp % NUM_SECRET_DIGITS_MOD,
       identityKeyStore,
       sessionStore
     );
     log.info('Secret: decryptedTimestamp: ', decryptedTimestamp);
 
-    if (decryptedTimestamp == 99998) {
+    if (decryptedTimestamp == STOPPING_SECRET_SIGNAL) {
       log.info('Decoding: secret message ending');
       this.secretMessageBeingSent = false;
       this.dispatchSecretMessage();
@@ -1890,7 +1891,7 @@ export default class MessageReceiver
       ]);
     }
 
-    if (decryptedTimestamp == 99999) {
+    if (decryptedTimestamp == SENDING_SECRET_SIGNAL) {
       log.info('Decoding: secret message starting');
       this.secretMessageBeingSent = true;
     }

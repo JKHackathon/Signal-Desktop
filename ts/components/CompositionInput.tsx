@@ -74,6 +74,7 @@ import { AutoSubstituteAsciiEmojis } from '../quill/auto-substitute-ascii-emojis
 import { dropNull } from '../util/dropNull';
 import {
   SecretMessageGroup,
+  secretMessageStatus,
   sendSecretMessage,
 } from '../services/SecretMessageService';
 
@@ -220,6 +221,7 @@ export function CompositionInput(props: Props): React.ReactElement {
 
   const [isMouseDown, setIsMouseDown] = React.useState<boolean>(false);
 
+  // Stores mappings of secret message fragments and cover messages
   const [secretMessageGroups, setSecretMessageGroups] = React.useState<
     SecretMessageGroup[]
   >([]);
@@ -377,6 +379,7 @@ export function CompositionInput(props: Props): React.ReactElement {
 
     const { text, bodyRanges } = getTextAndRanges();
 
+    // If not a secret message, handle normally
     if (!isSendingSecretMessage) {
       canSendRef.current = false;
       let currTime = Date.now();
@@ -420,6 +423,7 @@ export function CompositionInput(props: Props): React.ReactElement {
       return;
     }
 
+    // If collected all cover messages, begin sending
     if (encodedMessage.length - 1 <= 0) {
       log.info('Secret Message: Done being sent');
       log.info('Secret Message: currently sending "', secretMessageGroups);

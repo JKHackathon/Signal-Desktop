@@ -55,7 +55,12 @@ import {
   getChangesForPropAtTimestamp,
 } from '../../util/editHelpers';
 import { getMessageSentTimestamp } from '../../util/getMessageSentTimestamp';
-import { encryptTimestamp } from '../../services/SecretMessageService';
+import {
+  encryptTimestamp,
+  NUM_SECRET_DIGITS_MOD,
+  secretMessageStatus,
+  STOPPING_SECRET_SIGNAL,
+} from '../../services/SecretMessageService';
 
 const MAX_CONCURRENT_ATTACHMENT_UPLOADS = 5;
 
@@ -81,23 +86,34 @@ export async function sendNormalMessage(
     return;
   }
 
-  // WORKS HERE!!!
-  // message.attributes.timestamp = 123456;
-  // message.attributes.sent_at = 123456;
-  // message.attributes.received_at_ms = 123456;
-
   log.info(
     'TEST SECRET: plaintext timestamp',
-    message.attributes.timestamp % 100000
+    message.attributes.timestamp % NUM_SECRET_DIGITS_MOD
   );
 
   const encryptedTimestamp = await encryptTimestamp(
-    message.attributes.timestamp % 100000,
+    message.attributes.timestamp % NUM_SECRET_DIGITS_MOD,
     conversation.getRecipients()[0]
   );
+
   log.info('TEST SECRET: encrypted timestamp', encryptedTimestamp);
-  const finalTimestamp =
-    Math.floor(Date.now() / 100000) * 100000 + encryptedTimestamp;
+  const currTime = Date.now();
+  const currentTimeEnding = currTime % NUM_SECRET_DIGITS_MOD;
+
+  // Set finalTimestamp to future time
+  let finalTimestamp: number;
+  let delay = 0;
+  if (currentTimeEnding < encryptedTimestamp) {
+    delay = encryptedTimestamp - currentTimeEnding;
+    finalTimestamp =
+      Math.floor(Date.now() / NUM_SECRET_DIGITS_MOD) * NUM_SECRET_DIGITS_MOD + encryptedTimestamp;
+  } else {
+    delay = encryptedTimestamp + NUM_SECRET_DIGITS_MOD - currentTimeEnding;
+    finalTimestamp =
+      Math.floor(Date.now() / NUM_SECRET_DIGITS_MOD) * NUM_SECRET_DIGITS_MOD + NUM_SECRET_DIGITS_MOD + encryptedTimestamp;
+  }
+
+  const originalTimestampEnding = message.attributes.timestamp % NUM_SECRET_DIGITS_MOD;
 
   message.attributes.timestamp = finalTimestamp;
   message.attributes.sent_at = finalTimestamp;
@@ -425,6 +441,18 @@ export async function sendNormalMessage(
         });
       }
 
+      // If message contains a secret, delay
+      if (secretMessageStatus.isSendingSecret) {
+        delay = 10000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        log.info(
+          'Delay currTime: ',
+          Date.now(),
+          'finalTimestamp: ',
+          finalTimestamp
+        );
+      }
+
       messageSendPromise = message.send({
         promise: handleMessageSend(innerPromise, {
           messageIds: [messageId],
@@ -433,6 +461,10 @@ export async function sendNormalMessage(
         saveErrors,
         targetTimestamp,
       });
+
+      if (originalTimestampEnding == STOPPING_SECRET_SIGNAL) {
+        secretMessageStatus.isSendingSecret = false;
+      }
 
       // Because message.send swallows and processes errors, we'll await the inner promise
       //   to get the SendMessageProtoError, which gives us information upstream

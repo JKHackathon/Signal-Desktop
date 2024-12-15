@@ -14,68 +14,69 @@ type SendMessage = (
   timestamp: number
 ) => unknown;
 
-// const [isSendingSecret, setIsSendingSecret] = useState<boolean>(false);
+export const NUM_SECRET_DIGITS = 5;
+export const NUM_SECRET_DIGITS_MOD = Math.pow(10, NUM_SECRET_DIGITS);
+export const SENDING_SECRET_SIGNAL = NUM_SECRET_DIGITS_MOD - 1;
+export const STOPPING_SECRET_SIGNAL = NUM_SECRET_DIGITS_MOD - 2;
 
+// Indicates if secret message in the process of being transmitted
+export const secretMessageStatus = {
+  isSendingSecret: false,
+};
+
+// 
 export type SecretMessageGroup = [number, string, DraftBodyRanges];
 
+// Begin the process of sending the secret timestamps with cover messages
 export async function sendSecretMessage(
   sendMessage: SendMessage,
   secretMessagePairs: SecretMessageGroup[],
   conversation: ConversationModel | undefined
 ) {
-  // setIsSendingSecret(true)
+  secretMessageStatus.isSendingSecret = true;
   if (!conversation) {
     log.error('Secret message: conversation does not exist');
     return;
   }
-  log.info('send secret messages: ', secretMessagePairs)
-  // (async () => {
-  for (let [encodedMessage, coverMessage, bodyRanges] of secretMessagePairs) {
-    // canSendRef.current = false;
-    let currTime = Date.now();
-    // while (Math.abs((currTime % 100000) - encodedMessage) > 100) {
-    //   log.info(
-    //     `CompositionInput: Current time ${currTime} target time ${encodedMessage}`
-    //   );
-    //   await new Promise(resolve => setTimeout(resolve, 10));
-    //   currTime = Date.now();
-    // }
+  log.info('send secret messages: ', secretMessagePairs);
 
-    // const encryptedMessage = await encryptTimestamp(
-    //   encodedMessage,
-    //   conversation
-    // );
-    // log.info('Secret encrypted message: ', encryptedMessage);
+  for (let [encodedMessage, coverMessage, bodyRanges] of secretMessagePairs) {
+    let currTime = Date.now();
 
     log.info(
       'TEST: real time',
       currTime,
       'encoded time:',
-      Math.floor(currTime / 100000) * 100000 + encodedMessage
+      Math.floor(currTime / NUM_SECRET_DIGITS_MOD) * NUM_SECRET_DIGITS_MOD +
+        encodedMessage
     );
 
-    const didSend = sendMessage(
+    sendMessage(
       coverMessage,
       bodyRanges,
-      Math.floor(currTime / 100000) * 100000 + encodedMessage //encryptedMessage
+      Math.floor(currTime / NUM_SECRET_DIGITS_MOD) * NUM_SECRET_DIGITS_MOD +
+        encodedMessage
     );
-
-    // if (!didSend) {
-    //   canSendRef.current = true;
-    // }
   }
-  // })();
+  log.info(
+    'SecretMessageService: Finished secret sending',
+    secretMessageStatus.isSendingSecret
+  );
 }
 
-// export async function delaySend() {
-
-// }
-
+// encrypt timestamp using the current message's keys
 export async function encryptTimestamp(
   timestamp: number,
   recipient: ServiceIdString
-  // conversation: ConversationModel
 ): Promise<number> {
+  log.warn(
+    'SecretMessageService encryptTimestamp isSendingSecret:',
+    secretMessageStatus.isSendingSecret
+  );
+  if (!secretMessageStatus.isSendingSecret) {
+    return timestamp;
+  }
+
   const accountManager = window.getAccountManager();
   if (accountManager.areKeysOutOfDate(ServiceIdKind.ACI)) {
     log.warn(
@@ -90,30 +91,11 @@ export async function encryptTimestamp(
   const [sessionStore, protocolAddress] = await configureSession(recipient);
 
   return await signalEncryptTimestamp(timestamp, protocolAddress, sessionStore);
-
-  // const encryptedTimestamp = await signalEncryptTimestamp(
-  //   timestamp % 100000,
-  //   protocolAddress,
-  //   sessionStore
-  // );
-  // const signalMessage = SignalMessage.deserialize(Buffer.from(ciphertext));
-
-  // const decryptedTimestamp = await signalDecryptTimestamp(
-  //   signalMessage,
-  //   encryptedTimestamp,
-  //   protocolAddress,
-  //   sessionStore
-  // );
-  // log.info(
-  //   'Secret: encrypted: ',
-  //   encryptedTimestamp,
-  //   'decrypted: ',
-  //   decryptedTimestamp
-  // );
-  // return encryptedTimestamp;
 }
 
-async function configureSession(serviceId: ServiceIdString): Promise<[Sessions, ProtocolAddress]> {
+async function configureSession(
+  serviceId: ServiceIdString
+): Promise<[Sessions, ProtocolAddress]> {
   const ourAci = window.textsecure.storage.user.getCheckedAci();
   const deviceIds = await window.textsecure.storage.protocol.getDeviceIds({
     ourServiceId: ourAci,
@@ -132,89 +114,5 @@ async function configureSession(serviceId: ServiceIdString): Promise<[Sessions, 
   log.info('TEST SECRET mine: session store', sessionStore);
   log.info('TEST SECRET mine: protocol address', protocolAddress);
 
-  return [sessionStore, protocolAddress]
+  return [sessionStore, protocolAddress];
 }
-
-// if (encodedMessage.length > 0) {
-//   // log.info(
-//   //   'Secret Message: Please send ',
-//   //   encodedMessage.length,
-//   //   ' more messages'
-//   // );
-//   // log.info('Secret Message: currently sending "', text, '"');
-
-//   canSendRef.current = false;
-//   // let currTime = Date.now();
-
-//   const secretMessagePair: SecretMessagePair = [encodedMessage[0],text]
-//   setSecretMessagePairs(prevSecretMessages => [...prevSecretMessages, secretMessagePair])
-
-//   // while (Math.abs((currTime % 100000) - encodedMessage) > 100) {
-//   //   log.info(
-//   //     `CompositionInput: Current time ${currTime} target time ${encodedMessage}`
-//   //   );
-//   //   await new Promise(resolve => setTimeout(resolve, 10));
-//   //   currTime = Date.now();
-//   // }
-
-//   // const didSendEnd = onSubmit(
-//   //   text,
-//   //   bodyRanges,
-//   //   Math.floor(currTime / 100000) * 100000 + encodedMessage[0]
-//   // );
-
-//   // if (!didSendEnd) {
-//   //   canSendRef.current = true;
-//   // }
-
-//   setEncodedMessage(encodedMessage.slice(1));
-//   return;
-// }
-
-// (async () => {
-//   for (let encodedMessage of encodedMessages) {
-//     log.info(
-//       `CompositionInput: Submitting message ${timestamp} with ${bodyRanges.length} ranges`
-//     );
-//     canSendRef.current = false;
-//     let currTime = Date.now();
-//     // while (Math.abs((currTime % 100000) - encodedMessage) > 100) {
-//     //   log.info(
-//     //     `CompositionInput: Current time ${currTime} target time ${encodedMessage}`
-//     //   );
-//     //   await new Promise(resolve => setTimeout(resolve, 10));
-//     //   currTime = Date.now();
-//     // }
-
-//     const didSend = onSubmit(
-//       encodedMessage.toString(),
-//       bodyRanges,
-//       Math.floor(currTime / 100000) * 100000 + encodedMessage
-//     );
-
-//     if (!didSend) {
-//       canSendRef.current = true;
-//     }
-//   }
-// })();
-
-// Send ending secret message timestamp
-// canSendRef.current = false;
-// const didSend = onSubmit(
-//   text,
-//   bodyRanges,
-//   Math.floor(Date.now() / 100000) * 100000 + encodedMessage[0]
-// );
-// if (!didSend) {
-//   canSendRef.current = true;
-// }
-// setEncodedMessage(encodedMessage.slice(1));
-
-// if (!conversation) {
-//   log.debug('Secret: conversation null');
-//   return;
-// }
-// const ourAci = window.textsecure.storage.user.getCheckedAci();
-// log.debug('Secret: ourAci ', ourAci);
-// const recipients = conversation.getRecipients(); // Excludes sender
-// log.debug('Secret: recipients ', recipients);
