@@ -1,45 +1,99 @@
-<!-- Copyright 2014 Signal Messenger, LLC -->
-<!-- SPDX-License-Identifier: AGPL-3.0-only -->
+# Signal Desktop with Deniable Encryption
 
-# Signal Desktop
+Put purpose here
 
-Signal Desktop links with Signal on [Android](https://github.com/signalapp/Signal-Android) or [iOS](https://github.com/signalapp/Signal-iOS) and lets you message from your Windows, macOS, and Linux computers.
+## Build
 
-[Install the production version](https://signal.org/download/) or help us out by [installing the beta version](https://support.signal.org/hc/articles/360007318471-Signal-Beta).
+1. Clone the libsignal library
 
-## Got a question?
+2. Modify the `package.json` libsignal dependency to use your local installation (ex: `"@signalapp/libsignal-client": "file:../libsignal/node"`)
 
-You can find answers to a number of frequently asked questions on our [support site](https://support.signal.org/).
-The [community forum](https://community.signalusers.org/) is another good place for questions.
+3. Inside the Signal-Desktop directory, run `npm install`
+   If you get an error running regarding the Smaz license, this means the package patch did not work. Manually go into the node_modules directory and modify the licenses field `package.json` of the Smaz package from
 
-## Found a Bug?
+```
+"licenses": [
+    {
+      "type": "BSD",
+      "url": "https://github.com/personalcomputer/smaz.js/blob/master/COPYING"
+    }
+  ]
+```
 
-Please search for any [existing issues](https://github.com/signalapp/Signal-Desktop/issues) that describe your bug in order to avoid duplicate submissions.
+to
 
-## Have a feature request, question, comment?
+```
+"license": "BSD (https://github.com/personalcomputer/smaz.js/blob/master/COPYING)"
+```
 
-Please use our community forum: https://community.signalusers.org/
+Then, rerun `npm install` and the error should go away.
 
-## Contributing Code
+4. Build the project using `npm run generate`. If you get an error message that looks like the following, you may ignore it as this is a known issue that does not noticeably affect the client:
 
-Please see [CONTRIBUTING.md](https://github.com/signalapp/Signal-Desktop/blob/main/CONTRIBUTING.md)
-for setup instructions and guidelines for new contributors. Don't forget to sign the [CLA](https://signal.org/cla/).
+```
+$ ./node_modules/.bin/electron-builder install-app-deps
 
-## Contributing Funds
+  • electron-builder  version=24.6.3
+  • loaded configuration  file=package.json ("build" field)
+  • rebuilding native dependencies  dependencies=@nodert-win10-rs4/windows.data.xml.dom@0.4.4, @nodert-win10-rs4/windows.ui.notifications@0.4.4, @signalapp/better-sqlite3@8.7.1, @signalapp/windows-dummy-keystroke@1.0.0, bufferutil@4.0.7, fs-xattr@0.3.0, mac-screen-capture-permissions@2.0.0, utf-8-validate@5.0.10
+                                    platform=linux
+                                    arch=x64
+  • install prebuilt binary  name=mac-screen-capture-permissions version=2.0.0 platform=linux arch=x64 napi=
+  • build native dependency from sources  name=mac-screen-capture-permissions
+                                          version=2.0.0
+                                          platform=linux
+                                          arch=x64
+                                          napi=
+                                          reason=prebuild-install failed with error (run with env DEBUG=electron-builder to get more information)
+                                          error=/home/ben/sauce/Signal-Desktop/node_modules/node-abi/index.js:30
+      throw new Error('Could not detect abi for version ' + target + ' and runtime ' + runtime + '.  Updating "node-abi" might help solve this issue if it is a new release of ' + runtime)
+      ^
 
-You can donate to Signal development through the [Signal Technology Foundation](https://signal.org/donate), an independent 501c3 nonprofit.
+    Error: Could not detect abi for version 30.0.6 and runtime electron.  Updating "node-abi" might help solve this issue if it is a new release of electron
+        at getAbi (/home/ben/sauce/Signal-Desktop/node_modules/node-abi/index.js:30:9)
+        at module.exports (/home/ben/sauce/Signal-Desktop/node_modules/prebuild-install/rc.js:53:57)
+        at Object.<anonymous> (/home/ben/sauce/Signal-Desktop/node_modules/prebuild-install/bin.js:8:25)
+        at Module._compile (node:internal/modules/cjs/loader:1376:14)
+        at Module._extensions..js (node:internal/modules/cjs/loader:1435:10)
+        at Module.load (node:internal/modules/cjs/loader:1207:32)
+        at Module._load (node:internal/modules/cjs/loader:1023:12)
+        at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:135:12)
+        at node:internal/main/run_main_module:28:49
 
-## Cryptography Notice
+    Node.js v20.11.1
+```
 
-This distribution includes cryptographic software. The country in which you currently reside may have restrictions on the import, possession, use, and/or re-export to another country, of encryption software.
-BEFORE using any encryption software, please check your country's laws, regulations and policies concerning the import, possession, or use, and re-export of encryption software, to see if this is permitted.
-See <http://www.wassenaar.org/> for more information.
+## Additional storage profiles
 
-The U.S. Government Department of Commerce, Bureau of Industry and Security (BIS), has classified this software as Export Commodity Control Number (ECCN) 5D002.C.1, which includes information security software using or performing cryptographic functions with asymmetric algorithms.
-The form and manner of this distribution makes it eligible for export under the License Exception ENC Technology Software Unrestricted (TSU) exception (see the BIS Export Administration Regulations, Section 740.13) for both object code and source code.
+If you need additional phone numbers, you can use
+[Google Voice (one number per Google Account, free SMS)](https://voice.google.com/).
 
-## License
+Once you have the additional numbers, you can setup additional storage profiles and switch
+between them using the `NODE_APP_INSTANCE` environment variable.
 
-Copyright 2013-2024 Signal Messenger, LLC
+For example, to create an 'alice' profile, put a file called `local-alice.json` in the
+`/config` subdirectory of your project checkout where you'll find other `.json` config files:
 
-Licensed under the GNU AGPLv3: https://www.gnu.org/licenses/agpl-3.0.html
+```
+{
+  "storageProfile": "aliceProfile"
+}
+```
+
+Then you can start up the application a little differently to load the profile:
+
+```
+NODE_APP_INSTANCE=alice npm start
+```
+
+This changes the `userData` directory from `%appData%/Signal` to `%appData%/Signal-aliceProfile`.
+
+## Running
+
+When first running the project, you will have to set up the client in standalone mode as it is currently using the development servers. After starting the client using `npm start`, use the menu bar to select `File->Set Up as Standalone Device`.
+
+Sending an SMS to the specified phone number will open up a CAPTCHA. If the link fails to redirect to the client, close the warning toast and copy the link embedded in the "Open Signal" message. Then, run `npm start <copied link>` in a separate terminal instance which should redirect to the open client. Do not close the original client otherwise you will have to restart the process! Enter the verification code and select "Register". Finally, quit the client and rerun `npm start`. Congratulations! You have gained access to the Signal Desktop client!
+
+## Sending and Receiving Secret Messages
+
+First, start a 1:1 conversation with the intended recipient. Make sure you have the client open for each profile (the reason why is explained in the Report). Within the conversation, select the 3-dot menu option in the top right and then select `Show Secret Mode`. Then simply enter a secret message in the bottom input box, send it, then follow the prompt to send the specified number of cover messages.
